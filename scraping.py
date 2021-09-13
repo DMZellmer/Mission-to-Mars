@@ -9,17 +9,18 @@ import datetime as dt
 def scrape_all():
     # Initiate headless driver for deployment
     executable_path = {'executable_path': ChromeDriverManager().install()}
-    browser = Browser('chrome', **executable_path, headless=True)
+    browser = Browser('chrome', **executable_path, headless=False)
     
     news_title, news_paragraph = mars_news(browser)
-    
+   
     # Run all scraping functions and store results in dictionary
     data = {
         "news_title": news_title,
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
-        "last_modified": dt.datetime.now()
+        "last_modified": dt.datetime.now(),
+        "hemispheres": hemispheres(browser)
     }
 
     #Stop the webdriver and return data
@@ -52,6 +53,7 @@ def mars_news(browser):
         return None, None
 
     return news_title, news_p
+
 
 ### JPL Space Images Featured Image
 
@@ -89,7 +91,7 @@ def featured_image(browser):
 def mars_facts():
     # add try/except for error handling
     try:
-        # use 'read_html' to scrape the facts table into a datafram
+        # use 'read_html' to scrape the facts table into a dataframe
         df = pd.read_html('https://galaxyfacts-mars.com')[0]
     
     except BaseException:
@@ -105,3 +107,32 @@ def mars_facts():
 if __name__ == "__main__":
     # If running as script, print scraped data
     print(scrape_all())
+
+### Hemispheres image URLs and titles
+def hemispheres(browser):
+    # Visit URL
+    url = 'https://marshemispheres.com/'
+    browser.visit(url)
+
+    # create a list to hold the images and titles
+    hemi_image_urls = []
+
+    html = browser.html
+    hemi_soup = soup(html, 'html.parser')
+    hemisphere = hemi_soup.find_all('div', class_='description')
+    for x in range(len(hemisphere)):
+        hemispheres = {}
+        browser.find_by_css('img.thumb')[x].click()
+
+        # Retrieve data
+        title = browser.find_by_css('h2.title').text
+        url = browser.links.find_by_text("Sample")['href']
+
+        # Save data as dictionary
+        hemispheres['img_url'] = url
+        hemispheres['title'] = title
+        print(hemispheres)
+
+        # Append the dictionary data in the hemispheres list
+        hemi_image_urls.append(hemispheres)
+        browser.back()
